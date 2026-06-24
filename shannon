@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # shannon — operational helper for the Claude Code native Shannon pentest tool.
-#   shannon doctor     check the environment + what's installed
-#   shannon update     git-pull the source repo + re-run install.sh
-#   shannon uninstall  remove the globally-installed skill/agents/hook/MCP
+#   shannon doctor         check the environment + what's installed
+#   shannon install-tools  install the optional scanners (nmap/sqlmap/whatweb/…)
+#   shannon update         git-pull the source repo + re-run install.sh
+#   shannon uninstall      remove the globally-installed skill/agents/hook/MCP
 #
 # Derivative of Shannon (https://github.com/KeygraphHQ/shannon), AGPL-3.0.
 set -euo pipefail
@@ -20,7 +21,9 @@ cmd_doctor() {
   echo "Required:"
   for b in node npm jq claude; do command -v "$b" >/dev/null 2>&1 && ok "$b ($(command -v "$b"))" || bad "$b MISSING"; done
   echo "Optional scanners (pipeline skips if absent):"
-  for b in nmap subfinder whatweb sqlmap oathtool; do command -v "$b" >/dev/null 2>&1 && ok "$b" || warn "$b not installed"; done
+  local missing=0
+  for b in nmap subfinder whatweb sqlmap oathtool; do command -v "$b" >/dev/null 2>&1 && ok "$b" || { warn "$b not installed"; missing=1; }; done
+  [ "$missing" -eq 1 ] && echo "  → install the missing ones with: shannon install-tools"
   echo "Installed:"
   [ -f "$CLAUDE_DIR/skills/pentest/SKILL.md" ] && ok "/pentest skill" || bad "/pentest skill NOT installed — run ./install.sh"
   local n; n="$(ls "$CLAUDE_DIR"/agents/{shannon-pre-recon,shannon-recon,shannon-report}.md 2>/dev/null | wc -l | tr -d ' ')"
@@ -35,6 +38,48 @@ cmd_doctor() {
     jq -e '[.permissions.allow // [] | .[] | select(test("nmap|sqlmap"))] | length > 0' "$SETTINGS" >/dev/null 2>&1 \
       && ok "security-tool permission allowlist present" || warn "permission allowlist not merged — expect prompts"
   fi
+}
+
+cmd_install_tools() {
+  echo "Installing optional scanners for the Shannon pipeline…"
+  if command -v apt-get >/dev/null 2>&1; then
+    echo "→ apt (Debian/Ubuntu) — installs nmap, sqlmap, whatweb, oathtool"
+    sudo apt-get update -qq
+    # whatweb is packaged on apt; oathtool ships in the oathtool package
+    sudo apt-get install -y nmap sqlmap whatweb oathtool || warn "some apt packages failed — see output above"
+    command -v subfinder >/dev/null 2>&1 || warn "subfinder has no apt package — 'go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest' (needs Go), optional"
+  elif command -v brew >/dev/null 2>&1; then
+    echo "→ brew (macOS) — installs nmap, sqlmap, oath-toolkit, subfinder"
+    brew install nmap sqlmap oath-toolkit subfinder || warn "some brew formulae failed — see output above"
+    # whatweb: no Homebrew formula and no rubygem → clone upstream + a PATH wrapper.
+    if command -v whatweb >/dev/null 2>&1; then
+      ok "whatweb already on PATH"
+    else
+      local wdir="$SHANNON_HOME/tools/WhatWeb"
+      mkdir -p "$SHANNON_HOME/tools"
+      if [ -d "$wdir/.git" ]; then
+        echo "  whatweb: updating clone at $wdir"; git -C "$wdir" pull --ff-only -q || warn "whatweb pull failed (keeping existing clone)"
+      else
+        echo "  whatweb: cloning urbanadventurer/WhatWeb → $wdir"; git clone --depth 1 https://github.com/urbanadventurer/WhatWeb "$wdir"
+      fi
+      # Pick a bindir that's on PATH and writable; fall back to ~/.shannon/bin.
+      local bindir; bindir="$(dirname "$(command -v brew)")"   # e.g. /opt/homebrew/bin or /usr/local/bin
+      if [ ! -w "$bindir" ]; then mkdir -p "$SHANNON_HOME/bin"; bindir="$SHANNON_HOME/bin"; fi
+      # A wrapper, NOT a symlink: WhatWeb resolves its lib/ relative to the real script path,
+      # so it must be exec'd in place.
+      printf '#!/usr/bin/env bash\nexec "%s/whatweb" "$@"\n' "$wdir" > "$bindir/whatweb"
+      chmod +x "$bindir/whatweb"
+      ok "whatweb → $bindir/whatweb"
+      if [ "$bindir" = "$SHANNON_HOME/bin" ]; then
+        warn "add to PATH:  export PATH=\"$SHANNON_HOME/bin:\$PATH\""
+      fi
+      echo "  (basic fingerprinting runs on system Ruby; for the full plugin set: cd $wdir && bundle install)"
+    fi
+  else
+    bad "no apt-get or brew found — install manually: nmap, sqlmap, whatweb, oathtool, subfinder"
+    return 1
+  fi
+  echo "Done. Verify with: shannon doctor"
 }
 
 cmd_update() {
@@ -61,8 +106,9 @@ cmd_uninstall() {
 }
 
 case "${1:-}" in
-  doctor)    cmd_doctor ;;
-  update)    cmd_update ;;
-  uninstall) cmd_uninstall ;;
-  *) echo "usage: shannon {doctor|update|uninstall}"; exit 1 ;;
+  doctor)        cmd_doctor ;;
+  install-tools) cmd_install_tools ;;
+  update)        cmd_update ;;
+  uninstall)     cmd_uninstall ;;
+  *) echo "usage: shannon {doctor|install-tools|update|uninstall}"; exit 1 ;;
 esac
