@@ -1,5 +1,5 @@
 ---
-name: recon
+name: shannon-recon
 description: Attack surface mapping and reconnaissance. Requires pre-recon deliverable.
 tools: Read, Grep, Glob, Write, Edit, Bash, Agent, mcp__playwright__*, mcp__shannon-tools__*
 model: claude-sonnet-4-6

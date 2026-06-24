@@ -1,5 +1,5 @@
 ---
-name: report
+name: shannon-report
 description: Executive report writer. Modifies concatenated report with summary and cleanup.
 tools: Read, Grep, Glob, Write, Edit, Bash, Agent, mcp__playwright__*, mcp__shannon-tools__*
 model: claude-haiku-4-5

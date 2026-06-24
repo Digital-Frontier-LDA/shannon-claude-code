@@ -23,7 +23,7 @@ cmd_doctor() {
   for b in nmap subfinder whatweb sqlmap oathtool; do command -v "$b" >/dev/null 2>&1 && ok "$b" || warn "$b not installed"; done
   echo "Installed:"
   [ -f "$CLAUDE_DIR/skills/pentest/SKILL.md" ] && ok "/pentest skill" || bad "/pentest skill NOT installed — run ./install.sh"
-  local n; n="$(ls "$CLAUDE_DIR"/agents/{pre-recon,recon,report}.md 2>/dev/null | wc -l | tr -d ' ')"
+  local n; n="$(ls "$CLAUDE_DIR"/agents/{shannon-pre-recon,shannon-recon,shannon-report}.md 2>/dev/null | wc -l | tr -d ' ')"
   [ "${n:-0}" -ge 1 ] && ok "agents present" || bad "agents NOT installed"
   [ -f "$SHANNON_HOME/native/mcp-stdio-wrapper.mjs" ] && ok "shannon-tools MCP payload" || bad "MCP payload missing in $SHANNON_HOME"
   [ -d "$SHANNON_HOME/native/node_modules" ] && ok "MCP deps installed" || bad "MCP deps missing — run ./install.sh"
@@ -49,7 +49,7 @@ cmd_uninstall() {
   echo "Removing globally-installed Shannon assets (your settings.json/.claude.json backups are kept):"
   rm -rf "$CLAUDE_DIR/skills/pentest" && echo "  removed skills/pentest"
   rm -f "$CLAUDE_DIR/hooks/shannon-audit-logger.sh" && echo "  removed audit hook"
-  for a in pre-recon recon report vuln-injection vuln-xss vuln-auth vuln-authz vuln-ssrf exploit-injection exploit-xss exploit-auth exploit-authz exploit-ssrf; do
+  for a in shannon-pre-recon shannon-recon shannon-report shannon-vuln-injection shannon-vuln-xss shannon-vuln-auth shannon-vuln-authz shannon-vuln-ssrf shannon-exploit-injection shannon-exploit-xss shannon-exploit-auth shannon-exploit-authz shannon-exploit-ssrf; do
     rm -f "$CLAUDE_DIR/agents/$a.md"
   done; echo "  removed agents"
   if [ -f "$CLAUDE_JSON" ]; then

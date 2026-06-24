@@ -1,5 +1,5 @@
 ---
-name: pre-recon
+name: shannon-pre-recon
 description: Security-focused source code analysis. First agent in the pipeline - no prerequisites.
 tools: Read, Grep, Glob, Write, Edit, Bash, Agent, mcp__playwright__*, mcp__shannon-tools__*
 model: claude-opus-4-7

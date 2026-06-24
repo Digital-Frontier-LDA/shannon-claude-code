@@ -1,5 +1,5 @@
 ---
-name: vuln-ssrf
+name: shannon-vuln-ssrf
 description: Server-Side Request Forgery (SSRF) vulnerability analysis. Requires recon deliverable.
 tools: Read, Grep, Glob, Write, Edit, Bash, Agent, mcp__playwright__*, mcp__shannon-tools__*
 model: claude-sonnet-4-6

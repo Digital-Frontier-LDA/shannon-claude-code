@@ -1,5 +1,5 @@
 ---
-name: vuln-xss
+name: shannon-vuln-xss
 description: Cross-Site Scripting (XSS) vulnerability analysis. Requires recon deliverable.
 tools: Read, Grep, Glob, Write, Edit, Bash, Agent, mcp__playwright__*, mcp__shannon-tools__*
 model: claude-sonnet-4-6

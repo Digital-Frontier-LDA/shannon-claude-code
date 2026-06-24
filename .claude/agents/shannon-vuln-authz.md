@@ -1,5 +1,5 @@
 ---
-name: vuln-authz
+name: shannon-vuln-authz
 description: Authorization vulnerability analysis. Requires recon deliverable.
 tools: Read, Grep, Glob, Write, Edit, Bash, Agent, mcp__playwright__*, mcp__shannon-tools__*
 model: claude-sonnet-4-6
