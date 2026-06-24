@@ -7,8 +7,8 @@ Shannon's 5-phase penetration-testing pipeline, running natively in Claude Code 
 ## Quick start
 
 ```bash
-git clone https://github.com/Digital-Frontier-LDA/shannon-claude-code-plugin.git
-cd shannon-claude-code-plugin
+git clone https://github.com/Digital-Frontier-LDA/shannon-claude-code.git
+cd shannon-claude-code
 ./install.sh
 ```
 
