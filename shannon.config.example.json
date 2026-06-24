@@ -1,0 +1,16 @@
+{
+  "_about": "Copy to shannon.config.json in the project you want to scan. /pentest auto-loads it (Step 1.5) so you don't retype the target/login/scope. Inline /pentest args override these. shannon.config.json is gitignored by the installer. Secrets go in ENV VARS (password_env/totp_secret_env), never in this file.",
+  "target_url": "https://staging.example.com",
+  "login": {
+    "login_url": "https://staging.example.com/login",
+    "username": "pentester@example.com",
+    "password_env": "SHANNON_PASSWORD",
+    "login_type": "form",
+    "totp_secret_env": "SHANNON_TOTP"
+  },
+  "scope": {
+    "rules_to_avoid": ["/admin", "/billing", "payment endpoints"],
+    "focus": ["authentication", "authorization"]
+  },
+  "vuln_classes": ["injection", "xss", "auth", "authz", "ssrf"]
+}

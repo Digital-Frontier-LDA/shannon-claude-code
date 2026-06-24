@@ -1,0 +1,13 @@
+# Pentest run output — never commit (it can contain target details + findings)
+deliverables/
+audit-logs/
+workspace/
+
+# Your real config (target + login) — copy from shannon.config.example.json
+shannon.config.json
+
+# MCP server deps — resolved by install.sh (npm ci); not vendored
+native/node_modules/
+
+# Installer backups
+*.shannon-bak.*

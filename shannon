@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# shannon — operational helper for the Claude Code native Shannon pentest tool.
+#   shannon doctor     check the environment + what's installed
+#   shannon update     git-pull the source repo + re-run install.sh
+#   shannon uninstall  remove the globally-installed skill/agents/hook/MCP
+#
+# Derivative of Shannon (https://github.com/KeygraphHQ/shannon), AGPL-3.0.
+set -euo pipefail
+
+SHANNON_HOME="${SHANNON_HOME:-$HOME/.shannon}"
+CLAUDE_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+SETTINGS="$CLAUDE_DIR/settings.json"
+CLAUDE_JSON="$HOME/.claude.json"
+ok()   { printf '  ✓ %s\n' "$*"; }
+bad()  { printf '  ✗ %s\n' "$*"; }
+warn() { printf '  ! %s\n' "$*"; }
+
+cmd_doctor() {
+  echo "Shannon doctor"
+  echo "Required:"
+  for b in node npm jq claude; do command -v "$b" >/dev/null 2>&1 && ok "$b ($(command -v "$b"))" || bad "$b MISSING"; done
+  echo "Optional scanners (pipeline skips if absent):"
+  for b in nmap subfinder whatweb sqlmap oathtool; do command -v "$b" >/dev/null 2>&1 && ok "$b" || warn "$b not installed"; done
+  echo "Installed:"
+  [ -f "$CLAUDE_DIR/skills/pentest/SKILL.md" ] && ok "/pentest skill" || bad "/pentest skill NOT installed — run ./install.sh"
+  local n; n="$(ls "$CLAUDE_DIR"/agents/{pre-recon,recon,report}.md 2>/dev/null | wc -l | tr -d ' ')"
+  [ "${n:-0}" -ge 1 ] && ok "agents present" || bad "agents NOT installed"
+  [ -f "$SHANNON_HOME/native/mcp-stdio-wrapper.mjs" ] && ok "shannon-tools MCP payload" || bad "MCP payload missing in $SHANNON_HOME"
+  [ -d "$SHANNON_HOME/native/node_modules" ] && ok "MCP deps installed" || bad "MCP deps missing — run ./install.sh"
+  if [ -f "$CLAUDE_JSON" ]; then
+    jq -e '.mcpServers["shannon-tools"]' "$CLAUDE_JSON" >/dev/null 2>&1 && ok "shannon-tools registered in ~/.claude.json" || bad "shannon-tools NOT registered"
+    jq -e '.mcpServers.playwright' "$CLAUDE_JSON" >/dev/null 2>&1 && ok "playwright registered" || warn "playwright NOT registered"
+  else bad "~/.claude.json absent"; fi
+  if [ -f "$SETTINGS" ]; then
+    jq -e '[.permissions.allow // [] | .[] | select(test("nmap|sqlmap"))] | length > 0' "$SETTINGS" >/dev/null 2>&1 \
+      && ok "security-tool permission allowlist present" || warn "permission allowlist not merged — expect prompts"
+  fi
+}
+
+cmd_update() {
+  local src; src="$(cat "$SHANNON_HOME/.source-path" 2>/dev/null || true)"
+  [ -n "$src" ] && [ -d "$src/.git" ] || { echo "no git source recorded; re-clone the repo and run ./install.sh"; exit 1; }
+  echo "Updating from $src"
+  git -C "$src" pull --ff-only
+  exec "$src/install.sh"
+}
+
+cmd_uninstall() {
+  echo "Removing globally-installed Shannon assets (your settings.json/.claude.json backups are kept):"
+  rm -rf "$CLAUDE_DIR/skills/pentest" && echo "  removed skills/pentest"
+  rm -f "$CLAUDE_DIR/hooks/shannon-audit-logger.sh" && echo "  removed audit hook"
+  for a in pre-recon recon report vuln-injection vuln-xss vuln-auth vuln-authz vuln-ssrf exploit-injection exploit-xss exploit-auth exploit-authz exploit-ssrf; do
+    rm -f "$CLAUDE_DIR/agents/$a.md"
+  done; echo "  removed agents"
+  if [ -f "$CLAUDE_JSON" ]; then
+    jq 'del(.mcpServers["shannon-tools"]) | del(.mcpServers.playwright)' "$CLAUDE_JSON" > "$CLAUDE_JSON.tmp" && mv "$CLAUDE_JSON.tmp" "$CLAUDE_JSON"
+    echo "  unregistered MCP servers"
+  fi
+  echo "Note: the permission-allowlist entries merged into $SETTINGS were left in place."
+  echo "      To revert them, restore a $SETTINGS.shannon-bak.* backup. Payload at $SHANNON_HOME kept."
+}
+
+case "${1:-}" in
+  doctor)    cmd_doctor ;;
+  update)    cmd_update ;;
+  uninstall) cmd_uninstall ;;
+  *) echo "usage: shannon {doctor|update|uninstall}"; exit 1 ;;
+esac
